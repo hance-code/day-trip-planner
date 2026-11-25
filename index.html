@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>漫步旅圖｜一日遊行程與預算規劃器</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Top Navigation -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">🧭</div>
+        <div>
+          <h1>漫步旅圖 DayTrip</h1>
+          <p class="subtitle">一日遊景點・交通路線・美食・即時預算規劃</p>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <div class="preset-picker">
+          <label for="tripSelect" class="sr-only">選擇一日遊行程</label>
+          <select id="tripSelect" aria-label="選擇一日遊行程"></select>
+        </div>
+        <button id="btnNewTrip" class="btn btn-secondary" type="button">＋ 自訂新行程</button>
+        <button id="btnExport" class="btn btn-secondary" type="button">📋 匯出文字</button>
+        <button id="btnPrint" class="btn btn-secondary" type="button">🖨️ 列印</button>
+        <button id="btnReset" class="btn btn-ghost" type="button" title="重置為預設範例">↺ 重置</button>
+      </div>
+    </header>
+
+    <!-- Trip Overview Hero & Global Controls -->
+    <section class="hero-card" aria-label="行程總覽">
+      <div class="hero-info">
+        <div class="hero-badges">
+          <span id="tripRegionBadge" class="badge badge-region">北部山城</span>
+          <span id="tripDurationBadge" class="badge badge-neutral">約 10 小時</span>
+          <span id="tripStopsBadge" class="badge badge-neutral">6 個站點</span>
+        </div>
+        <h2 id="tripTitle" class="trip-title">載入中...</h2>
+        <p id="tripDescription" class="trip-desc"></p>
+
+        <div class="global-controls">
+          <div class="control-group">
+            <span class="control-label">全局交通切換</span>
+            <div class="transport-segmented" role="group" aria-label="選擇主要交通方式">
+              <button class="seg-btn active" data-mode="transit" type="button">🚇 大眾運輸</button>
+              <button class="seg-btn" data-mode="car" type="button">🚗 開車/計程車</button>
+              <button class="seg-btn" data-mode="scooter" type="button">🛵 騎機車</button>
+              <button class="seg-btn" data-mode="walk" type="button">🚶 步行/單車</button>
+            </div>
+          </div>
+
+          <div class="control-group compact">
+            <label for="startTimeInput" class="control-label">出發時間</label>
+            <input id="startTimeInput" type="time" value="08:30" class="input-sm" />
+          </div>
+
+          <div class="control-group compact">
+            <label for="peopleCountInput" class="control-label">同行人數</label>
+            <div class="stepper">
+              <button id="btnPeopleMinus" type="button" aria-label="減少人數">−</button>
+              <input id="peopleCountInput" type="number" min="1" max="20" value="2" />
+              <button id="btnPeoplePlus" type="button" aria-label="增加人數">＋</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick KPI Summary -->
+      <div class="hero-kpis">
+        <div class="kpi-box accent">
+          <span class="kpi-label">預估每人總花費</span>
+          <strong id="kpiPerPerson" class="kpi-value">NT$ 0</strong>
+          <span id="kpiGroupTotal" class="kpi-sub">整團共 NT$ 0</span>
+        </div>
+        <div class="kpi-box">
+          <span class="kpi-label">總移動距離 / 時間</span>
+          <strong id="kpiDistance" class="kpi-value">0 km</strong>
+          <span id="kpiTravelTime" class="kpi-sub">車程約 0 分鐘</span>
+        </div>
+        <div class="kpi-box">
+          <span class="kpi-label">預計結束時間</span>
+          <strong id="kpiEndTime" class="kpi-value">--:--</strong>
+          <span id="kpiFoodCount" class="kpi-sub">精選 0 間美食</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main 2-Column Workspace -->
+    <main class="workspace">
+      <!-- Left Column: Timeline & Route Stops -->
+      <div class="main-column">
+        <div class="panel-header">
+          <div class="view-tabs" role="tablist">
+            <button class="tab-btn active" data-tab="timeline" role="tab" aria-selected="true" type="button">📍 行程路線與交通</button>
+            <button class="tab-btn" data-tab="food" role="tab" aria-selected="false" type="button">🍜 必吃美食清單</button>
+            <button class="tab-btn" data-tab="compare" role="tab" aria-selected="false" type="button">🚦 各交通工具總比較</button>
+          </div>
+          <button id="btnAddStop" class="btn btn-primary" type="button">＋ 新增景點 / 美食</button>
+        </div>
+
+        <!-- Tab 1: Timeline -->
+        <div id="tab-timeline" class="tab-panel active">
+          <div id="timelineContainer" class="timeline-list"></div>
+        </div>
+
+        <!-- Tab 2: Food List -->
+        <div id="tab-food" class="tab-panel">
+          <div id="foodGrid" class="food-grid"></div>
+        </div>
+
+        <!-- Tab 3: Transport Mode Comparison -->
+        <div id="tab-compare" class="tab-panel">
+          <div class="compare-card">
+            <h3>四種交通方式全程比較</h3>
+            <p class="muted">依據目前行程各段路程自動加總預估時間、距離與費用（含自駕油資/停車費或大眾運輸票價估算）。</p>
+            <div id="compareTableContainer" class="compare-table-wrap"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Visual Route Map & Budget Breakdown -->
+      <aside class="side-column">
+        <!-- Route Map Card -->
+        <section class="card map-card" aria-label="視覺化路線圖">
+          <div class="card-header">
+            <h3>🗺️ 互動路線圖</h3>
+            <a id="btnOpenFullMap" href="#" target="_blank" rel="noopener noreferrer" class="text-link">在 Google Maps 開啟全程 ↗</a>
+          </div>
+          <div class="map-canvas-wrap">
+            <svg id="routeMapSvg" viewBox="0 0 420 300" role="img" aria-label="一日遊站點路線示意圖"></svg>
+          </div>
+          <p class="map-hint">點擊地圖站點可快速跳轉並高亮對應行程卡片</p>
+        </section>
+
+        <!-- Budget Breakdown Card -->
+        <section class="card budget-card" aria-label="預算明細與估算">
+          <div class="card-header">
+            <h3>💰 預算與金額試算</h3>
+            <label class="toggle-inline">
+              <input id="splitCarCostToggle" type="checkbox" checked />
+              <span>自駕/計程車依人數均攤</span>
+            </label>
+          </div>
+
+          <div class="budget-visual">
+            <svg id="budgetDonutSvg" viewBox="0 0 160 160" class="donut-svg" aria-hidden="true"></svg>
+            <div class="budget-center-label">
+              <span>每人預估</span>
+              <strong id="donutPerPerson">NT$ 0</strong>
+            </div>
+          </div>
+
+          <ul id="budgetBreakdownList" class="budget-list"></ul>
+
+          <div class="misc-budget-row">
+            <label for="miscBudgetInput">🎁 伴手禮 / 備用金 (每人)</label>
+            <div class="currency-input">
+              <span>NT$</span>
+              <input id="miscBudgetInput" type="number" min="0" step="50" value="300" />
+            </div>
+          </div>
+
+          <div class="budget-footer">
+            <div>
+              <span class="muted">每人總計</span>
+              <strong id="footerPerPerson">NT$ 0</strong>
+            </div>
+            <div class="text-right">
+              <span class="muted">全團總計 (<span id="footerPeopleCount">2</span>人)</span>
+              <strong id="footerTotalGroup">NT$ 0</strong>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <!-- Modal: Add / Edit Stop -->
+  <div id="stopModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="stopModalTitle">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="stopModalTitle">新增站點</h3>
+        <button id="btnCloseStopModal" class="icon-btn" type="button" aria-label="關閉">✕</button>
+      </div>
+      <form id="stopForm" class="modal-body">
+        <input type="hidden" id="editStopId" />
+        <div class="form-grid">
+          <div class="form-field span-2">
+            <label for="stopNameInput">站點 / 店名 *</label>
+            <input id="stopNameInput" type="text" required placeholder="例如：十分老街 / 阿妹茶樓" />
+          </div>
+          <div class="form-field">
+            <label for="stopCategoryInput">類別</label>
+            <select id="stopCategoryInput">
+              <option value="attraction">🏞️ 景點</option>
+              <option value="food">🍜 美食餐廳</option>
+              <option value="cafe">☕ 下午茶 / 甜點</option>
+              <option value="shopping">🛍️ 逛街 / 伴手禮</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="stopDurationInput">停留時間 (分鐘)</label>
+            <input id="stopDurationInput" type="number" min="10" step="5" value="60" required />
+          </div>
+          <div class="form-field">
+            <label for="stopTicketCostInput">門票 / 體驗費 (每人 NT$)</label>
+            <input id="stopTicketCostInput" type="number" min="0" step="10" value="0" />
+          </div>
+          <div class="form-field">
+            <label for="stopFoodCostInput">餐飲 / 小吃費 (每人 NT$)</label>
+            <input id="stopFoodCostInput" type="number" min="0" step="10" value="0" />
+          </div>
+          <div class="form-field span-2">
+            <label for="stopFoodItemsInput">推薦必吃美食 / 亮點（以逗號分隔）</label>
+            <input id="stopFoodItemsInput" type="text" placeholder="例如：花生捲冰淇淋, 芋圓, 天燈體驗" />
+          </div>
+          <div class="form-field span-2">
+            <label for="stopNoteInput">行程筆記 / 建議</label>
+            <textarea id="stopNoteInput" rows="2" placeholder="輸入開放時間、拍照點或預約提醒..."></textarea>
+          </div>
+        </div>
+
+        <fieldset class="leg-fieldset">
+          <legend>從上一站到此站的路程資訊（若為第一站則忽略）</legend>
+          <div class="form-grid-4">
+            <div class="form-field">
+              <label for="legDistanceInput">距離 (km)</label>
+              <input id="legDistanceInput" type="number" min="0" step="0.1" value="3.5" />
+            </div>
+            <div class="form-field">
+              <label for="legTransitMin">大眾運輸 (分)</label>
+              <input id="legTransitMin" type="number" min="0" value="25" />
+            </div>
+            <div class="form-field">
+              <label for="legTransitCost">大眾運輸 (NT$)</label>
+              <input id="legTransitCost" type="number" min="0" value="30" />
+            </div>
+            <div class="form-field">
+              <label for="legCarMin">開車/計程車 (分)</label>
+              <input id="legCarMin" type="number" min="0" value="15" />
+            </div>
+            <div class="form-field">
+              <label for="legCarCost">開車/計程車 (NT$)</label>
+              <input id="legCarCost" type="number" min="0" value="180" />
+            </div>
+            <div class="form-field">
+              <label for="legScooterMin">騎機車 (分)</label>
+              <input id="legScooterMin" type="number" min="0" value="15" />
+            </div>
+            <div class="form-field">
+              <label for="legScooterCost">騎機車 (NT$)</label>
+              <input id="legScooterCost" type="number" min="0" value="40" />
+            </div>
+            <div class="form-field">
+              <label for="legWalkMin">步行/單車 (分)</label>
+              <input id="legWalkMin" type="number" min="0" value="45" />
+            </div>
+          </div>
+          <div class="form-field" style="margin-top:8px;">
+            <label for="legRouteDescInput">路線說明</label>
+            <input id="legRouteDescInput" type="text" placeholder="例如：搭乘捷運紅線至淡水站 / 沿台2線行駛" />
+          </div>
+        </fieldset>
+
+        <div class="modal-footer">
+          <button id="btnCancelStopModal" class="btn btn-secondary" type="button">取消</button>
+          <button class="btn btn-primary" type="submit">儲存站點</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Export Text -->
+  <div id="exportModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="exportModalTitle">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="exportModalTitle">匯出文字版行程表</h3>
+        <button id="btnCloseExportModal" class="icon-btn" type="button" aria-label="關閉">✕</button>
+      </div>
+      <div class="modal-body">
+        <textarea id="exportTextarea" class="export-textarea" rows="16" readonly></textarea>
+        <div class="modal-footer">
+          <button id="btnCopyExport" class="btn btn-primary" type="button">📋 複製全部內容</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
